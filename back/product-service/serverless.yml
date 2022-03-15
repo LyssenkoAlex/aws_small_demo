@@ -1,0 +1,122 @@
+service: product-service
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: dev
+  region: eu-west-1
+  lambdaHashingVersion: 20201221
+  environment:
+    ENV_STAGE: ${opt:stage, 'dev'}
+    PGHOST: ${self:custom.dotenvVars.PGHOST, env:PGHOST, ''}
+    PGUSER: ${self:custom.dotenvVars.PGUSER, env:PGUSER, ''}
+    PGDATABASE: ${self:custom.dotenvVars.PGDATABASE, env:PGDATABASE, ''}
+    PGPASSWORD: ${self:custom.dotenvVars.PGPASSWORD, env:PGPASSWORD, ''}
+    PGPORT: ${self:custom.dotenvVars.PGPORT, env:PGPORT, ''}
+    SQS_URL:
+      Ref:SQSQueue
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action: "sqs:*"
+      Resource:
+        - Fn::GetAtt: [ SQSQueue, Arn ]
+
+plugins:
+  - serverless-webpack
+
+custom:
+  webpack:
+    webpackConfig: 'webpack.config.js'
+    includeModules: true
+
+resources:
+  Resources:
+    SQSQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: catalogItemsQueue
+
+functions:
+  getAllProducts:
+    handler: handler_dql.getAllProducts
+    events:
+      - http:
+          path: products
+          method: get
+          cors: true
+
+  getStockProducts:
+    handler: handler_dql.getStockProducts
+    events:
+      - http:
+          path: products/stock
+          method: get
+          cors: true
+
+  getProductById:
+    handler: handler_dql.getProductById
+    events:
+      - http:
+          path: product/{productId}
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                productId: true
+
+  createDbProduct:
+    handler: handler_dml.createProduct
+    events:
+      - http:
+          path: product/create
+          method: post
+          cors: true
+
+  updateProduct:
+    handler: handler_dml.updateProduct
+    events:
+      - http:
+          path: product/update/{productId}
+          method: put
+          cors: true
+          request:
+            parameters:
+              paths:
+                productId: true
+
+  deleteProduct:
+    handler: handler_dml.deleteProduct
+    events:
+      - http:
+          path: product/delete/{productId}
+          method: delete
+          cors: true
+          request:
+            parameters:
+              paths:
+                productId: true
+
+  parseProductFile:
+    handler: handler_sqs.parseProductFile
+    events:
+      - http:
+          path: put_file
+          method: get
+          cors: true
+
+
+  catalogBatchProcess:
+    handler: handler_sqs.catalogBatchProcess
+    events:
+      - sqs:
+          batchSize: 5
+          arn:
+            Fn::GetAtt:
+              - SQSQueue
+              - Arn
+
+
+

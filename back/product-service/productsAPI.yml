@@ -1,0 +1,170 @@
+---
+openapi: 3.0.0
+info:
+  title: Alex products
+  description: |
+    This is an API docs for Alex products
+  contact:
+    email: lyssenko.alex@gmail.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 0.3.0
+externalDocs:
+  description: Find out more about Swagger
+  url: http://swagger.io
+servers:
+  - url: https://uzg1hf1fba.execute-api.eu-west-1.amazonaws.com/dev
+    description: SwaggerHub API Auto Mocking
+  - url: https://virtserver.swaggerhub.com/rss-maksim/bookStoreAPI/0.3.0
+    description: SwaggerHub API Auto Mocking
+tags:
+  - name: products
+    description: Programming books
+    externalDocs:
+      description: Find out more about our store
+      url: http://swagger.io
+paths:
+  /products:
+    get:
+      tags:
+        - products
+      summary: Get existing products
+      operationId: getProducts
+      responses:
+        "404":
+          description: Products not found
+        "405":
+          description: Validation exception
+    post:
+      tags:
+        - products
+      summary: Create a product in the store
+      operationId: createProduct
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+      responses:
+        "405":
+          description: Invalid input
+      deprecated: true
+  /products/{productId}:
+    get:
+      tags:
+        - products
+      summary: Find product by ID
+      description: Returns a single product
+      operationId: getProductById
+      parameters:
+        - name: productId
+          in: path
+          description: ID of product to return
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        "400":
+          description: Invalid ID supplied
+        "404":
+          description: Product not found
+      security:
+        - api_key: []
+    delete:
+      tags:
+        - products
+      summary: Deletes a product
+      operationId: deleteProduct
+      parameters:
+        - name: api_key
+          in: header
+          required: false
+          style: simple
+          explode: false
+          schema:
+            type: string
+        - name: productId
+          in: path
+          description: Product id to delete
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "400":
+          description: Invalid ID supplied
+        "404":
+          description: Product not found
+      deprecated: true
+      security:
+        - bookstore_auth:
+            - write:products
+            - read:products
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+          format: int32
+        count:
+          type: integer
+          format: int32
+        edition:
+          type: integer
+          format: int32
+        published:
+          type: string
+        publisher:
+          type: string
+        authors:
+          type: string
+        coverUrl:
+          type: string
+        rating:
+          type: integer
+          format: int32
+      xml:
+        name: Product
+  requestBodies:
+    Product:
+      description: Product object that needs to be added to the store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Product'
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/Product'
+      required: true
+  securitySchemes:
+    bookstore_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: http://productstore.swagger.io/oauth/dialog
+          scopes:
+            write:products: modify products in your account
+            read:products: read your products
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
